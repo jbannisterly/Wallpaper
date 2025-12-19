@@ -1,7 +1,8 @@
 import openmeteo_requests
 import json
+import datetime
 
-def GetForecast(filePath: str):
+def UpdateForecast(filePath: str):
   url = "https://api.open-meteo.com/v1/forecast"
   weather_params = ["is_day", "rain", "weather_code"]
   params = {
@@ -27,14 +28,28 @@ def GetForecast(filePath: str):
   except Exception as e:
     print(e)
 
+def CurrentIndex(time: float):
+  currentTime = datetime.datetime.now().timestamp()
+  deltaTime = currentTime - time
+  return int(deltaTime / 900)
+
 def ReadNow(filePath: str):
+  with open(filePath, 'r') as inputFile:
+    data = json.load(inputFile)
+    print(CurrentIndex(data['time']))
   return 0
 
+def DataExpired(filePath):
+  with open(filePath, 'r') as inputFile:
+    data = json.load(inputFile)
+    currentIndex = CurrentIndex(data['time'])
+    maxIndex = len(data['rain'])
+  return currentIndex >= maxIndex
+
 def GetNow():
-  GetForecast("out/data")
+  UpdateForecast("out/data")
   return ReadNow("out/data")
   
 
-GetNow()
-
+print(DataExpired("out/data"))
 
