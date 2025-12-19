@@ -18,12 +18,13 @@ def UpdateForecast(filePath: str):
   try:
     responses = client.weather_api(url, params = params)
     response = responses[0]
-    data = {}
+    dataWeather = {}
+    dataInfo = {}
     for i,weather_param in enumerate(weather_params):
-      data[weather_param] = response.Minutely15().Variables(i).ValuesAsNumpy().tolist()
-    data['time'] = response.Minutely15().Time()
+      dataWeather[weather_param] = response.Minutely15().Variables(i).ValuesAsNumpy().tolist()
+    dataInfo['time'] = response.Minutely15().Time()
     with open(filePath, 'w') as outputFile:
-      json.dump(data, outputFile)
+      json.dump({'weather' : dataWeather, 'info' : dataInfo}, outputFile)
 
   except Exception as e:
     print(e)
@@ -36,15 +37,20 @@ def CurrentIndex(time: float):
 def ReadNow(filePath: str):
   with open(filePath, 'r') as inputFile:
     data = json.load(inputFile)
-    print(CurrentIndex(data['time']))
-  return 0
+    dataWeather = data['weather']
+    index = CurrentIndex(data['info']['time'])
+    dataNow = {}
+    for dataKey in dataWeather:
+      keyIndex = min(index, len(dataWeather[dataKey]) - 1)
+      dataNow[dataKey] = dataWeather[dataKey][keyIndex]
+  return dataNow
 
 def DataExpired(filePath, timeAllowed):
   try:
     with open(filePath, 'r') as inputFile:
       data = json.load(inputFile)
-      currentIndex = CurrentIndex(data['time'])
-      maxIndex = len(data['rain'])
+      currentIndex = CurrentIndex(data['info']['time'])
+      maxIndex = len(data['weather']['rain'])
     return currentIndex >= maxIndex or currentIndex > timeAllowed * 4
   except Exception as e:
     print(e)
@@ -56,7 +62,8 @@ def EnsureFresh(filePath):
     UpdateForecast(filePath)
 
 def GetNow():
-  EnsureFresh("out/data")
-  return ReadNow("out/data")
+  path = 'out/data'
+  EnsureFresh(path)
+  return ReadNow(path)
 
-GetNow()
+print(GetNow())
