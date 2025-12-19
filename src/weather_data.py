@@ -1,17 +1,40 @@
 import openmeteo_requests
+import json
 
-url = "https://api.open-meteo.com/v1/forecast"
-params = {
+def GetForecast(filePath: str):
+  url = "https://api.open-meteo.com/v1/forecast"
+  weather_params = ["is_day", "rain", "weather_code"]
+  params = {
 	"latitude": 50,
 	"longitude": 0,
-	"minutely_15": ["is_day", "rain", "weather_code"],
+	"minutely_15": weather_params,
 	"forecast_days": 1,
 	"forecast_minutely_15": 96,
-}
+  }
 
-client = openmeteo_requests.Client()
+  client = openmeteo_requests.Client()
 
-responses = client.weather_api(url, params = params)
-response = responses[0]
+  try:
+    responses = client.weather_api(url, params = params)
+    response = responses[0]
+    data = {}
+    for i,weather_param in enumerate(weather_params):
+      data[weather_param] = response.Minutely15().Variables(i).ValuesAsNumpy().tolist()
+    data['time'] = response.Minutely15().Time()
+    with open(filePath, 'w') as outputFile:
+      json.dump(data, outputFile)
 
-print(response.Minutely15().Variables(2).ValuesAsNumpy())
+  except Exception as e:
+    print(e)
+
+def ReadNow(filePath: str):
+  return 0
+
+def GetNow():
+  GetForecast("out/data")
+  return ReadNow("out/data")
+  
+
+GetNow()
+
+
