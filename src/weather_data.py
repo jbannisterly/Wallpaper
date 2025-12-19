@@ -39,17 +39,24 @@ def ReadNow(filePath: str):
     print(CurrentIndex(data['time']))
   return 0
 
-def DataExpired(filePath):
-  with open(filePath, 'r') as inputFile:
-    data = json.load(inputFile)
-    currentIndex = CurrentIndex(data['time'])
-    maxIndex = len(data['rain'])
-  return currentIndex >= maxIndex
+def DataExpired(filePath, timeAllowed):
+  try:
+    with open(filePath, 'r') as inputFile:
+      data = json.load(inputFile)
+      currentIndex = CurrentIndex(data['time'])
+      maxIndex = len(data['rain'])
+    return currentIndex >= maxIndex or currentIndex > timeAllowed * 4
+  except Exception as e:
+    print(e)
+    return True
+
+def EnsureFresh(filePath):
+  if (DataExpired(filePath, 2)):
+    print("fetching new data...")
+    UpdateForecast(filePath)
 
 def GetNow():
-  UpdateForecast("out/data")
+  EnsureFresh("out/data")
   return ReadNow("out/data")
-  
 
-print(DataExpired("out/data"))
-
+GetNow()
