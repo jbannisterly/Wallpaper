@@ -2,13 +2,25 @@ import openmeteo_requests
 import json
 import datetime
 
+def hourto15min(data, offset):
+  newData = []
+  for i in range(len(data) - 1):
+    newData += [float(data[i])]
+    newData += [float(data[i] * 0.75 + data[i + 1] * 0.25)]
+    newData += [float(data[i] * 0.50 + data[i + 1] * 0.50)]
+    newData += [float(data[i] * 0.25 + data[i + 1] * 0.75)]
+
+  return newData[offset:]
+
 def UpdateForecast(filePath: str):
   url = "https://api.open-meteo.com/v1/forecast"
-  weather_params = ["is_day", "rain", "weather_code"]
+  weather_params_15 = ["is_day", "rain", "snowfall", "weather_code"]
+  weather_params_hr = ["cloud_cover"]
   params = {
 	"latitude": 50,
 	"longitude": 0,
-	"minutely_15": weather_params,
+	"minutely_15": weather_params_15,
+  "hourly": weather_params_hr,
 	"forecast_days": 1,
 	"forecast_minutely_15": 96,
   }
@@ -20,8 +32,11 @@ def UpdateForecast(filePath: str):
     response = responses[0]
     dataWeather = {}
     dataInfo = {}
-    for i,weather_param in enumerate(weather_params):
+    hourlyTimeOffset = int((response.Minutely15().Time() - response.Hourly().Time()) / 900)
+    for i,weather_param in enumerate(weather_params_15):
       dataWeather[weather_param] = response.Minutely15().Variables(i).ValuesAsNumpy().tolist()
+    for i,weather_param in enumerate(weather_params_hr):
+      dataWeather[weather_param] = hourto15min(response.Hourly().Variables(i).ValuesAsNumpy(), hourlyTimeOffset)
     dataInfo['time'] = response.Minutely15().Time()
     with open(filePath, 'w') as outputFile:
       json.dump({'weather' : dataWeather, 'info' : dataInfo}, outputFile)
