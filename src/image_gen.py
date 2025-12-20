@@ -20,9 +20,9 @@ def GenVertical(height):
   return ydif / np.max(ydif)
 
 def GenSky():
-  grad = (1 - GenRadial([100, 420])) ** 2 + (1 - GenVertical(400))
+  grad = (1 - GenRadial([100, 420])) ** 2 * 0.5 + (1 - GenVertical(200)) * 0.5
   sky = np.zeros((600, 800, 3))
-  sky[:,:,1] = grad * 0.6
+  sky[:,:,1] = grad * 0.8
   sky[:,:,2] = grad * 0.6
   sky[:,:,0] = 1
   cv2.imwrite(skyBasePath, sky * 255)
@@ -42,18 +42,34 @@ def GenMask(imagePath):
   cv2.imwrite(maskFieldPath, baseMaskField)
   cv2.imwrite(maskSkyPath, baseMaskSky)
 
-def GenImage(basePath):
+def GenImage(basePath, lightLevel):
   base = cv2.imread(basePath)
   baseSky = cv2.imread(skyBasePath)
   baseMaskField = cv2.imread(maskFieldPath)
   baseMaskSky = cv2.imread(maskSkyPath)
 
-  output = base * baseMaskField + baseMaskSky * baseSky
+  outputSky = baseMaskSky * baseSky
+  outputSky = cv2.cvtColor(outputSky, cv2.COLOR_RGB2HSV)
+  outputSky[:,:,1] = outputSky[:,:,1] * (lightLevel * 0.7 + 0.3)
+  outputSky[:,:,2] = outputSky[:,:,2] * (lightLevel * 0.9 + 0.1)
+  outputSky = cv2.cvtColor(outputSky, cv2.COLOR_HSV2RGB)
 
-  cv2.imwrite('out/output.png', output)
+
+  outputField = baseMaskField * base
+  outputField = cv2.cvtColor(outputField, cv2.COLOR_RGB2HSV)
+  outputField[:,:,1] = outputField[:,:,1] * (lightLevel * 0.6 + 0.4)
+  outputField[:,:,2] = outputField[:,:,2] * (lightLevel * 0.8 + 0.2)
+  outputField = cv2.cvtColor(outputField, cv2.COLOR_HSV2RGB)
+
+
+  output = outputSky + outputField
+
+  cv2.imwrite('out/output' + str(lightLevel * 10) + '.png', output)
 
 if not os.path.isfile(maskSkyPath) or True:
   GenMask(imagePath)
 if not os.path.isfile(skyBasePath) or True:
   GenSky()
-GenImage(imagePath)
+
+for i in range(11):
+  GenImage(imagePath, (i + 1) / 10)
