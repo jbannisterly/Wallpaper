@@ -28,7 +28,14 @@ def GenSky():
   sky[:,:,0] = 1
   cv2.imwrite(skyBasePath, sky * 255)
 
-def GenCloud(scale, cover, offset, outputid = ''):
+def ProjectCloud(cloud):
+  coordFrom = np.float32([[0,0],[800,0],[0,600],[800,600]]) 
+  coordTo = np.float32([[-400,0],[1200, 0],[0,400],[800,400]])
+
+  transformMatrix = cv2.getPerspectiveTransform(coordFrom,coordTo)    
+  return cv2.warpPerspective(cloud, transformMatrix,(800,600))
+
+def GenCloud(scale, cover, offset):
   n1 = np.ones((600, 800))
   n2 = np.ones((600, 800))
   for i in range(600):
@@ -42,9 +49,9 @@ def GenCloud(scale, cover, offset, outputid = ''):
   n1 = n1 * cover
   n2 = n2 * (1 - cover)
 
-  cloud = np.clip(n1 - n2, 0, 1) ** 0.7
-
-  cv2.imwrite('img/cloud' + outputid + '.png', cloud * 255)
+  cloud = np.clip(n1 - n2, 0, 1) ** 1
+  cloud = ProjectCloud(cloud)
+  return cloud
 
 def GenMask(imagePath):
   print('reloading mask')
@@ -61,11 +68,15 @@ def GenMask(imagePath):
   cv2.imwrite(maskFieldPath, baseMaskField)
   cv2.imwrite(maskSkyPath, baseMaskSky)
 
-def GenImage(basePath, lightLevel):
+def GenImage(basePath, lightLevel, cloudLevel):
   base = cv2.imread(basePath)
   baseSky = cv2.imread(skyBasePath)
   baseMaskField = cv2.imread(maskFieldPath)
   baseMaskSky = cv2.imread(maskSkyPath)
+
+  outputCloud = GenCloud(150, cloudLevel * 2, [0, 0, 0])
+  outputCloud = np.float32(outputCloud)
+  baseSky = baseSky * (1 - outputCloud[:,:,np.newaxis]) + outputCloud[:,:,np.newaxis] * 255
 
   outputSky = baseMaskSky * baseSky
   outputSky = cv2.cvtColor(outputSky, cv2.COLOR_RGB2HSV)
@@ -80,10 +91,9 @@ def GenImage(basePath, lightLevel):
   outputField[:,:,2] = outputField[:,:,2] * (lightLevel * 0.8 + 0.2)
   outputField = cv2.cvtColor(outputField, cv2.COLOR_HSV2RGB)
 
-
   output = outputSky + outputField
 
-  cv2.imwrite('out/output' + str(lightLevel * 10) + '.png', output)
+  cv2.imwrite('out/output' + str(cloudLevel * 10) + '.png', output)
 
 if not os.path.isfile(maskSkyPath) or True:
   GenMask(imagePath)
@@ -91,7 +101,4 @@ if not os.path.isfile(skyBasePath) or True:
   GenSky()
 
 for i in range(11):
-  GenImage(imagePath, (i + 1) / 10)
-
-for i in range(10):
-  GenCloud(150, i / 20, [0, i / 3, i / 5], str(i))
+  GenImage(imagePath, 1, i / 10)
