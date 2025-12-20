@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import os.path
+import noise
 
 imagePath = 'img/base.png'
 maskFieldPath = 'img/base_mask_field.png'
@@ -26,6 +27,24 @@ def GenSky():
   sky[:,:,2] = grad * 0.6
   sky[:,:,0] = 1
   cv2.imwrite(skyBasePath, sky * 255)
+
+def GenCloud(scale, cover, offset, outputid = ''):
+  n1 = np.ones((600, 800))
+  n2 = np.ones((600, 800))
+  for i in range(600):
+    for j in range(800):
+      n1[i][j] = noise.snoise3(i / scale + offset[0], j / scale + offset[1], 2.2 + offset[2])
+      n2[i][j] = noise.snoise3(i / scale + offset[0], j / scale + offset[1], 1 + offset[2])
+
+  n1 = n1 * 0.5 + 0.5
+  n2 = n2 * 0.5 + 0.5
+
+  n1 = n1 * cover
+  n2 = n2 * (1 - cover)
+
+  cloud = np.clip(n1 - n2, 0, 1) ** 0.7
+
+  cv2.imwrite('img/cloud' + outputid + '.png', cloud * 255)
 
 def GenMask(imagePath):
   print('reloading mask')
@@ -73,3 +92,6 @@ if not os.path.isfile(skyBasePath) or True:
 
 for i in range(11):
   GenImage(imagePath, (i + 1) / 10)
+
+for i in range(10):
+  GenCloud(150, i / 20, [0, i / 3, i / 5], str(i))
