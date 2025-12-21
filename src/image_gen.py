@@ -68,18 +68,18 @@ def GenMask(imagePath):
   cv2.imwrite(maskFieldPath, baseMaskField)
   cv2.imwrite(maskSkyPath, baseMaskSky)
 
-def GenImage(basePath, lightLevel, cloudLevel):
+def GenImage(time, basePath, lightLevel, cloudLevel):
   base = cv2.imread(basePath)
   baseSky = cv2.imread(skyBasePath)
   baseMaskField = cv2.imread(maskFieldPath)
   baseMaskSky = cv2.imread(maskSkyPath)
 
-  cloudDetails = GenCloud(50, 1, [2,3,4])
-  outputCloud = GenCloud(150, cloudLevel * 2, [0, 0, 0])
+  cloudDetails = GenCloud(50, 1, [0, time, time])
+  outputCloud = GenCloud(150, cloudLevel * 2, [0, time, time + 10])
   outputCloud = np.float32(outputCloud)
-  baseSky = baseSky * (1 - outputCloud[:,:,np.newaxis]) + outputCloud[:,:,np.newaxis] * 255 * (1 - cloudLevel * 0.2) * (cloudDetails[:,:,np.newaxis] * 0.1 + 0.9)
+  baseSky = baseSky * (1 - outputCloud[:,:,np.newaxis]) + outputCloud[:,:,np.newaxis] * 255 * (1 - cloudLevel * 0.2)  * (cloudDetails[:,:,np.newaxis] * 0.1 + 0.9)
 
-  cv2.imwrite('img/sky.png', cloudDetails)
+  # cv2.imwrite('img/sky.png', cloudDetails)
 
   outputSky = baseMaskSky * baseSky
   outputSky = cv2.cvtColor(np.float32(outputSky), cv2.COLOR_RGB2HSV)
@@ -96,12 +96,11 @@ def GenImage(basePath, lightLevel, cloudLevel):
 
   output = outputSky + outputField
 
-  cv2.imwrite('out/output' + str(cloudLevel * 10) + '.png', output)
+  cv2.imwrite('out/output.png', output)
 
-if not os.path.isfile(maskSkyPath) or True:
-  GenMask(imagePath)
-if not os.path.isfile(skyBasePath) or True:
-  GenSky()
-
-for i in range(11):
-  GenImage(imagePath, 1, i / 10)
+def CreateImages(time, lightLevel, cloudLevel):
+  if not os.path.isfile(maskSkyPath):
+    GenMask(imagePath)
+  if not os.path.isfile(skyBasePath):
+    GenSky()
+  GenImage(time, imagePath, lightLevel, cloudLevel)
