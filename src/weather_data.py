@@ -80,5 +80,3 @@ def GetNow():
   path = 'out/data'
   EnsureFresh(path)
   return ReadNow(path)
-
-print(GetNow())
