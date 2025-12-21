@@ -38,10 +38,17 @@ def ProjectCloud(cloud):
 def GenCloud(scale, cover, offset):
   n1 = np.ones((600, 800))
   n2 = np.ones((600, 800))
+  z1 = offset[2] + 2.2
+  z2 = offset[2] + 1
+  invScale = 1 / scale
   for i in range(600):
+    ii = i / scale + offset[0]
+    ii4 = ii * 4
+    jj = offset[1]
     for j in range(800):
-      n1[i][j] = noise.snoise3(i / scale + offset[0], j / scale + offset[1], 2.2 + offset[2]) + noise.snoise3(i / scale * 4 + offset[0], j / scale * 4 + offset[1], 2.2 + offset[2]) * 0.3
-      n2[i][j] = noise.snoise3(i / scale + offset[0], j / scale + offset[1], 1 + offset[2])
+      jj += invScale
+      n1[i][j] = noise.snoise3(ii, jj, z1) + noise.snoise3(ii4, jj * 4, z1) * 0.3
+      n2[i][j] = noise.snoise3(ii, jj, z2)
 
   n1 = n1 * 0.5 + 0.5
   n2 = n2 * 0.5 + 0.5
@@ -49,7 +56,7 @@ def GenCloud(scale, cover, offset):
   n1 = n1 * cover
   n2 = n2 * (1 - cover)
 
-  cloud = np.clip(n1 - n2, 0, 1) ** 1
+  cloud = np.clip(n1 - n2, 0, 1)
   cloud = ProjectCloud(cloud)
   return cloud
 
