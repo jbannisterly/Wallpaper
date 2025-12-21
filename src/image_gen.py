@@ -30,7 +30,7 @@ def GenSky():
 
 def ProjectCloud(cloud):
   coordFrom = np.float32([[0,0],[800,0],[0,600],[800,600]]) 
-  coordTo = np.float32([[-400,0],[1200, 0],[0,400],[800,400]])
+  coordTo = np.float32([[-1200,0],[2000, 0],[0,400],[800,400]])
 
   transformMatrix = cv2.getPerspectiveTransform(coordFrom,coordTo)    
   return cv2.warpPerspective(cloud, transformMatrix,(800,600))
@@ -40,7 +40,7 @@ def GenCloud(scale, cover, offset):
   n2 = np.ones((600, 800))
   for i in range(600):
     for j in range(800):
-      n1[i][j] = noise.snoise3(i / scale + offset[0], j / scale + offset[1], 2.2 + offset[2])
+      n1[i][j] = noise.snoise3(i / scale + offset[0], j / scale + offset[1], 2.2 + offset[2]) + noise.snoise3(i / scale * 4 + offset[0], j / scale * 4 + offset[1], 2.2 + offset[2]) * 0.3
       n2[i][j] = noise.snoise3(i / scale + offset[0], j / scale + offset[1], 1 + offset[2])
 
   n1 = n1 * 0.5 + 0.5
@@ -74,22 +74,25 @@ def GenImage(basePath, lightLevel, cloudLevel):
   baseMaskField = cv2.imread(maskFieldPath)
   baseMaskSky = cv2.imread(maskSkyPath)
 
+  cloudDetails = GenCloud(50, 1, [2,3,4])
   outputCloud = GenCloud(150, cloudLevel * 2, [0, 0, 0])
   outputCloud = np.float32(outputCloud)
-  baseSky = baseSky * (1 - outputCloud[:,:,np.newaxis]) + outputCloud[:,:,np.newaxis] * 255
+  baseSky = baseSky * (1 - outputCloud[:,:,np.newaxis]) + outputCloud[:,:,np.newaxis] * 255 * (1 - cloudLevel * 0.2) * (cloudDetails[:,:,np.newaxis] * 0.1 + 0.9)
+
+  cv2.imwrite('img/sky.png', cloudDetails)
 
   outputSky = baseMaskSky * baseSky
-  outputSky = cv2.cvtColor(outputSky, cv2.COLOR_RGB2HSV)
+  outputSky = cv2.cvtColor(np.float32(outputSky), cv2.COLOR_RGB2HSV)
   outputSky[:,:,1] = outputSky[:,:,1] * (lightLevel * 0.7 + 0.3)
   outputSky[:,:,2] = outputSky[:,:,2] * (lightLevel * 0.9 + 0.1)
-  outputSky = cv2.cvtColor(outputSky, cv2.COLOR_HSV2RGB)
+  outputSky = cv2.cvtColor(np.float32(outputSky), cv2.COLOR_HSV2RGB)
 
 
   outputField = baseMaskField * base
   outputField = cv2.cvtColor(outputField, cv2.COLOR_RGB2HSV)
-  outputField[:,:,1] = outputField[:,:,1] * (lightLevel * 0.6 + 0.4)
+  outputField[:,:,1] = outputField[:,:,1] * (lightLevel * 0.6 + 0.4 - cloudLevel * 0.4)
   outputField[:,:,2] = outputField[:,:,2] * (lightLevel * 0.8 + 0.2)
-  outputField = cv2.cvtColor(outputField, cv2.COLOR_HSV2RGB)
+  outputField = cv2.cvtColor(outputField, cv2.COLOR_HSV2RGB) * (1 - cloudLevel * 0.3)
 
   output = outputSky + outputField
 
