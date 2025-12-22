@@ -117,4 +117,12 @@ def GetNow():
   EnsureFresh(path)
   current = ReadNow(path)
   print(current)
+  try:
+    with open('_config', 'r') as configFile:
+      data = json.load(configFile)
+      overrides = data['override']
+      for override in overrides:
+        current[override] = overrides[override] 
+  except Exception as e:
+    print(e)
   return current
