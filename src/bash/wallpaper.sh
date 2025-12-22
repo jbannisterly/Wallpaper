@@ -1,7 +1,7 @@
 #!/bin/bash
 BACKGROUND_PATH="out/output"
 
-python ./src/wallpaper.py
+python ./src/python/wallpaper.py
 while true
 do
    for wallpaper in ./img_out/*; do
