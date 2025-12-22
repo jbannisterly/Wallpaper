@@ -36,7 +36,7 @@ def GenSky():
 
 def ProjectCloud(cloud, imagesSize):
   coordFrom = np.float32([[0,0],[imagesSize[1],0],[0,imagesSize[0]],[imagesSize[1],imagesSize[0]]]) 
-  coordTo = np.float32([[imagesSize[1] * -1.5,0],[imagesSize[1] * 2.5, 0],[0,imagesSize[0] / 2],[imagesSize[1],imagesSize[0] / 2]])
+  coordTo = np.float32([[imagesSize[1] * -1.5,0],[imagesSize[1] * 2.5, 0],[0,imagesSize[0] * 5 / 6],[imagesSize[1],imagesSize[0] * 5 / 6]])
 
   transformMatrix = cv2.getPerspectiveTransform(coordFrom,coordTo)    
   return cv2.warpPerspective(cloud, transformMatrix,(imagesSize[1],imagesSize[0]))
