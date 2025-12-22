@@ -6,3 +6,4 @@ img_cache/*
 img_input/*
 img_out/*
 _config
+temp/*

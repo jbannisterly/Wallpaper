@@ -7,5 +7,9 @@ do
       echo "$wallpaper"
       sleep 0.067
    done
+   if [ -f ./temp/noanimate ]; then
+      echo "no animate"
+      exit 1
+   fi
 done
 
