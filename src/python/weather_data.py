@@ -1,6 +1,7 @@
 import openmeteo_requests
 import json
 import datetime
+import numpy as np
 
 def GetReload():
   try:
@@ -46,6 +47,8 @@ def UpdateForecast(filePath: str):
 	"forecast_minutely_15": 96,
   }
 
+  print(params)
+
   client = openmeteo_requests.Client()
 
   try:
@@ -59,6 +62,8 @@ def UpdateForecast(filePath: str):
     for i,weather_param in enumerate(weather_params_hr):
       dataWeather[weather_param] = hourto15min(response.Hourly().Variables(i).ValuesAsNumpy(), hourlyTimeOffset)
     dataInfo['time'] = response.Minutely15().Time()
+    print(np.argmax(dataWeather['is_day']))
+    print(dataWeather['is_day'])
     with open(filePath, 'w') as outputFile:
       json.dump({'weather' : dataWeather, 'info' : dataInfo}, outputFile)
 
@@ -82,6 +87,8 @@ def ReadNow(filePath: str):
     dataWeather = data['weather']
     index = CurrentIndex(data['info']['time'])
     interpolation = CurrentInterpolation(data['info']['time'])
+    print(index)
+    print(interpolation)
     dataNow = {}
     for dataKey in dataWeather:
       keyIndex = min(index, len(dataWeather[dataKey]) - 1)
@@ -109,4 +116,5 @@ def GetNow():
   path = 'out/data'
   EnsureFresh(path)
   current = ReadNow(path)
+  print(current)
   return current
