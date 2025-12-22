@@ -1,10 +1,13 @@
 #!/bin/bash
 BACKGROUND_PATH="out/output"
 
+python ./src/wallpaper.py
 while true
 do
-   python ./src/wallpaper.py
-   xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitoreDP-1/workspace0/last-image --set "${PWD}/${BACKGROUND_PATH}.png"
-   sleep 0.1
+   for wallpaper in ./img_out/*; do
+      xfconf-query --channel xfce4-desktop --property /backdrop/screen0/monitoreDP-1/workspace0/last-image --set "${PWD}/${wallpaper}"
+      echo "$wallpaper"
+      sleep 0.067
+   done
 done
 

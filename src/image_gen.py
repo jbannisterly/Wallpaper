@@ -3,10 +3,10 @@ import numpy as np
 import os.path
 import noise
 
-imagePath = 'img/base.png'
-maskFieldPath = 'img/base_mask_field.png'
-maskSkyPath = 'img/base_mask_sky.png'
-skyBasePath = 'img/base_sky.png'
+imagePath = 'img_input/base.png'
+maskFieldPath = 'img_input/base_mask_field.png'
+maskSkyPath = 'img_input/base_mask_sky.png'
+skyBasePath = 'img_input/base_sky.png'
 
 def GenRadial(centre):
   grid = np.indices((800, 600)).swapaxes(0, 2)
@@ -60,17 +60,15 @@ def GenCloud(scale, cover, offset):
   cloud = ProjectCloud(cloud)
   return cloud
 
-def GenRain(time, rainLevel):
-  np.random.seed(0)
+def GenRain(time, rainLevel, seed=0):
   rnd = np.ones((600,800))
   for i in range(600):
     for j in range(800):
-      rnd[i][j] = noise.snoise3(i / 80 + time * 20, j / 2, 0)
+      rnd[i][j] = noise.snoise3(i / 80 + time * 20, j / 2, seed)
 
   rain = rnd > (1 - rainLevel * 0.5)
 
   return rain
-  cv2.imwrite('img/rain' + str(rainLevel) + '.png', rain * 255)
 
 def GenMask(imagePath):
   print('reloading mask')
@@ -96,7 +94,8 @@ def GenImage(time, basePath, lightLevel, cloudLevel, rainLevel):
   cloudDetails = GenCloud(50, 1, [0, time, time])
   outputCloud = GenCloud(150, cloudLevel * 2, [0, time, time + 10])
   outputCloud = np.float32(outputCloud)
-  baseSky = baseSky * (1 - outputCloud[:,:,np.newaxis]) + outputCloud[:,:,np.newaxis] * 255 * (1 - cloudLevel * 0.2)  * (cloudDetails[:,:,np.newaxis] * 0.1 + 0.9)
+  combinedCloud = outputCloud[:,:,np.newaxis] * 255 * (1 - cloudLevel * 0.2)  * (cloudDetails[:,:,np.newaxis] * 0.1 + 0.9)
+  baseSky = baseSky * (1 - outputCloud[:,:,np.newaxis]) + combinedCloud * (lightLevel * 0.5 + 0.5)
 
   # cv2.imwrite('img/sky.png', cloudDetails)
 
@@ -111,13 +110,16 @@ def GenImage(time, basePath, lightLevel, cloudLevel, rainLevel):
   outputField[:,:,1] = outputField[:,:,1] * (lightLevel * 0.6 + 0.4 - cloudLevel * 0.4)
   outputField[:,:,2] = outputField[:,:,2] * (lightLevel * 0.8 + 0.2)
   outputField = cv2.cvtColor(outputField, cv2.COLOR_HSV2RGB) * (1 - cloudLevel * 0.3)
+ 
+  rain = []
 
-  rain = GenRain(time, rainLevel)
+  for i in range(10):
+    rain.append(GenRain(time, rainLevel, i))
 
-  output = outputSky + outputField
-  output = output * (1 - rain[:,:,np.newaxis] * 0.5) + rain[:,:,np.newaxis] * 0.5
-
-  cv2.imwrite('out/output.png', output)
+  cv2.imwrite('img_cache/output_field.png', outputField)
+  cv2.imwrite('img_cache/output_sky.png', outputSky)
+  for i in range(10):
+    cv2.imwrite('img_cache/rain' + str(i) + '.png', rain[i] * 255)
 
 def CreateImages(time, lightLevel, cloudLevel, rainLevel):
   if not os.path.isfile(maskSkyPath):
@@ -125,3 +127,5 @@ def CreateImages(time, lightLevel, cloudLevel, rainLevel):
   if not os.path.isfile(skyBasePath):
     GenSky()
   GenImage(time, imagePath, lightLevel, cloudLevel, rainLevel)
+
+# CreateImages(0, 1, 1, 0.5)

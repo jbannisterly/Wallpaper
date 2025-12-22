@@ -2,3 +2,6 @@ venv/*
 out/*
 img/*
 src/__pycache__/*
+img_cache/*
+img_input/*
+img_out/*
