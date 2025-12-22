@@ -34,14 +34,14 @@ def GenSky():
   sky[:,:,0] = 1
   cv2.imwrite(skyBasePath, sky * 255)
 
-def ProjectCloud(cloud):
+def ProjectCloud(cloud, imagesSize):
   coordFrom = np.float32([[0,0],[imagesSize[1],0],[0,imagesSize[0]],[imagesSize[1],imagesSize[0]]]) 
   coordTo = np.float32([[imagesSize[1] * -1.5,0],[imagesSize[1] * 2.5, 0],[0,imagesSize[0] / 2],[imagesSize[1],imagesSize[0] / 2]])
 
   transformMatrix = cv2.getPerspectiveTransform(coordFrom,coordTo)    
   return cv2.warpPerspective(cloud, transformMatrix,(imagesSize[1],imagesSize[0]))
 
-def GenCloud(scale, cover, offset):
+def GenCloud(scale, cover, offset, imagesSize):
   n1 = np.ones((imagesSize[0], imagesSize[1]))
   n2 = np.ones((imagesSize[0], imagesSize[1]))
   z1 = offset[2] + 2.2
@@ -63,10 +63,10 @@ def GenCloud(scale, cover, offset):
   n2 = n2 * (1 - cover)
 
   cloud = np.clip(n1 - n2, 0, 1)
-  cloud = ProjectCloud(cloud)
+  cloud = ProjectCloud(cloud, imagesSize)
   return cloud
 
-def GenRain(time, rainLevel, seed=0):
+def GenRain(time, rainLevel, imagesSize, seed=0):
   rnd = np.ones((imagesSize[0],imagesSize[1]))
   for i in range(imagesSize[0]):
     for j in range(imagesSize[1]):
@@ -89,7 +89,6 @@ def GenMask(imagePath):
   baseMask = (np.where(baseH > 20, 1, 0) + np.where(baseV < 70, 1, 0)) * (1 - (np.where(baseS < 50, 1, 0) * np.where(baseV > 100, 1, 0)))
   baseMaskField = np.where(baseMask > 0, 1, 0)
 
-  baseMaskField = cv2.blur(baseMaskField, (3,3))
   baseMaskSky = 1 - baseMaskField
 
   cv2.imwrite(maskFieldPath, baseMaskField)
@@ -97,17 +96,18 @@ def GenMask(imagePath):
 
 def GenImage(time, basePath, lightLevel, cloudLevel, rainLevel):
   base = cv2.imread(basePath)
+  imagesSize = base.shape
   baseSky = cv2.imread(skyBasePath)
   baseMaskField = cv2.imread(maskFieldPath)
   baseMaskSky = cv2.imread(maskSkyPath)
 
-  cloudDetails = GenCloud(50, 1, [0, time, time])
-  outputCloud = GenCloud(150, cloudLevel * 2, [0, time, time + 10])
+  cloudDetails = GenCloud(50, 1, [0, time, time], imagesSize)
+  outputCloud = GenCloud(150, cloudLevel * 2, [0, time, time + 10], imagesSize)
   outputCloud = np.float32(outputCloud)
   combinedCloud = outputCloud[:,:,np.newaxis] * 255 * (1 - cloudLevel * 0.2)  * (cloudDetails[:,:,np.newaxis] * 0.1 + 0.9)
   baseSky = baseSky * (1 - outputCloud[:,:,np.newaxis]) + combinedCloud * (lightLevel * 0.5 + 0.5)
 
-  # cv2.imwrite('img/sky.png', cloudDetails)
+  cv2.imwrite('./img_cache/output_cloud.png', combinedCloud)
 
   outputSky = baseMaskSky * baseSky
   outputSky = cv2.cvtColor(np.float32(outputSky), cv2.COLOR_RGB2HSV)
@@ -124,7 +124,7 @@ def GenImage(time, basePath, lightLevel, cloudLevel, rainLevel):
   rain = []
 
   for i in range(10):
-    rain.append(GenRain(time, rainLevel, i))
+    rain.append(GenRain(time, rainLevel, imagesSize, i))
 
   cv2.imwrite('img_cache/output_field.png', outputField)
   cv2.imwrite('img_cache/output_sky.png', outputSky)
