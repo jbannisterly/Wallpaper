@@ -2,6 +2,26 @@ import openmeteo_requests
 import json
 import datetime
 
+def GetReload():
+  try:
+    with open('_config', 'r') as configFile:
+      data = json.load(configFile)
+    return data['reload']
+  except Exception as e:
+    print(e)
+    return False
+
+def GetLocation():
+  try:
+    with open('_config', 'r') as configFile:
+      data = json.load(configFile)
+      long = data['long']
+      lat = data['lat']
+    return (long, lat)
+  except Exception as e:
+    print(e)
+    return (0, 50)
+
 def hourto15min(data, offset):
   newData = []
   for i in range(len(data) - 1):
@@ -16,9 +36,10 @@ def UpdateForecast(filePath: str):
   url = "https://api.open-meteo.com/v1/forecast"
   weather_params_15 = ["is_day", "rain", "snowfall", "weather_code"]
   weather_params_hr = ["cloud_cover"]
+  long, lat = GetLocation()
   params = {
-	"latitude": 50,
-	"longitude": 0,
+	"latitude": lat,
+	"longitude": long,
 	"minutely_15": weather_params_15,
   "hourly": weather_params_hr,
 	"forecast_days": 1,
@@ -72,7 +93,7 @@ def DataExpired(filePath, timeAllowed):
     return True
 
 def EnsureFresh(filePath):
-  if (DataExpired(filePath, 2)):
+  if (DataExpired(filePath, 2)) or GetReload():
     print("fetching new data...")
     UpdateForecast(filePath)
 
