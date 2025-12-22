@@ -70,15 +70,23 @@ def CurrentIndex(time: float):
   deltaTime = currentTime - time
   return int(deltaTime / 900)
 
+def CurrentInterpolation(time: float):  
+  currentTime = datetime.datetime.now().timestamp()
+  deltaTime = currentTime - time
+  return (deltaTime / 900) - int(deltaTime / 900)
+
+
 def ReadNow(filePath: str):
   with open(filePath, 'r') as inputFile:
     data = json.load(inputFile)
     dataWeather = data['weather']
     index = CurrentIndex(data['info']['time'])
+    interpolation = CurrentInterpolation(data['info']['time'])
     dataNow = {}
     for dataKey in dataWeather:
       keyIndex = min(index, len(dataWeather[dataKey]) - 1)
-      dataNow[dataKey] = dataWeather[dataKey][keyIndex]
+      keyIndexNext = min(index + 1, len(dataWeather[dataKey]) - 1)
+      dataNow[dataKey] = dataWeather[dataKey][keyIndex] * (1 - interpolation) + dataWeather[dataKey][keyIndexNext] * interpolation
   return dataNow
 
 def DataExpired(filePath, timeAllowed):
@@ -100,4 +108,5 @@ def EnsureFresh(filePath):
 def GetNow():
   path = 'out/data'
   EnsureFresh(path)
-  return ReadNow(path)
+  current = ReadNow(path)
+  return current
