@@ -92,6 +92,7 @@ def ReadNow(filePath: str):
     dataNow = {}
     for dataKey in dataWeather:
       keyIndex = min(index, len(dataWeather[dataKey]) - 1)
+      print(dataWeather)
       keyIndexNext = min(index + 1, len(dataWeather[dataKey]) - 1)
       dataNow[dataKey] = dataWeather[dataKey][keyIndex] * (1 - interpolation) + dataWeather[dataKey][keyIndexNext] * interpolation
   return dataNow

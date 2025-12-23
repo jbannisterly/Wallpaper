@@ -7,6 +7,7 @@ imagePath = 'img_input/base.png'
 maskFieldPath = 'img_input/base_mask_field.png'
 maskSkyPath = 'img_input/base_mask_sky.png'
 skyBasePath = 'img_input/base_sky.png'
+skyNightBasePath = 'img_input/base_night_sky.png'
 global imagesSize
 imagesSize = (1,1,1)
 
@@ -23,16 +24,45 @@ def GenVertical(height, imagesSize):
   print("grid shape " + str(grid.shape))
   return ydif / np.max(ydif)
 
-def GenSky():
-  base = cv2.imread(imagePath)
-  imagesSize = base.shape
+def GenSkyNight(imagesSize):
+  grad = (1 - GenRadial([imagesSize[0] / 6, imagesSize[1] * 21 / 40], imagesSize)) ** 2 * 0.5 + (1 - GenVertical(imagesSize[0] / 6, imagesSize)) * 0.5
 
+  sky = np.random.random(imagesSize) * 255
+
+  skyV = sky[:,:,2] > 254
+  skyS = sky[:,:,1] < 15
+  skyBright = skyV * skyS
+  
+  sky = np.float32(sky * skyBright[:,:,np.newaxis])
+
+  sky[:,:,1] /= 100
+
+  sky = cv2.cvtColor(sky, cv2.COLOR_HSV2RGB) / 255
+  sky = cv2.GaussianBlur(sky, (17,5), 0.8) + cv2.GaussianBlur(sky, (5,17), 0.8) + cv2.GaussianBlur(sky, (17,17), 0.2)
+
+  sky = np.pow(sky, 0.1)
+
+  sky[:,:,0] += grad * 0.07
+  sky[:,:,1] += grad * 0.01
+  sky[:,:,2] += grad * 0.1
+
+
+  cv2.imwrite(skyNightBasePath, sky * 255)
+
+def GenSkyDay(imagesSize):
   grad = (1 - GenRadial([imagesSize[0] / 6, imagesSize[1] * 21 / 40], imagesSize)) ** 2 * 0.5 + (1 - GenVertical(imagesSize[0] / 6, imagesSize)) * 0.5
   sky = np.zeros((imagesSize[0], imagesSize[1], 3))
   sky[:,:,1] = grad * 0.8
   sky[:,:,2] = grad * 0.6
   sky[:,:,0] = 1
   cv2.imwrite(skyBasePath, sky * 255)
+
+
+def GenSky():
+  base = cv2.imread(imagePath)
+  imagesSize = base.shape
+  GenSkyDay(imagesSize)
+  GenSkyNight(imagesSize)
 
 def ProjectCloud(cloud, imagesSize):
   coordFrom = np.float32([[0,0],[imagesSize[1],0],[0,imagesSize[0]],[imagesSize[1],imagesSize[0]]]) 
@@ -98,21 +128,24 @@ def GenImage(time, basePath, lightLevel, cloudLevel, rainLevel):
   base = cv2.imread(basePath)
   imagesSize = base.shape
   baseSky = cv2.imread(skyBasePath)
+  baseSkyNight = cv2.imread(skyNightBasePath)
   baseMaskField = cv2.imread(maskFieldPath)
   baseMaskSky = cv2.imread(maskSkyPath)
+
+  baseSky = baseSky * lightLevel + baseSkyNight * (1 - lightLevel)
 
   cloudDetails = GenCloud(50, 1, [0, time, time], imagesSize)
   outputCloud = GenCloud(150, cloudLevel * 2, [0, time, time + 10], imagesSize)
   outputCloud = np.float32(outputCloud)
   combinedCloud = outputCloud[:,:,np.newaxis] * 255 * (1 - cloudLevel * 0.2)  * (cloudDetails[:,:,np.newaxis] * 0.1 + 0.9)
-  baseSky = baseSky * (1 - outputCloud[:,:,np.newaxis]) + combinedCloud * (lightLevel * 0.5 + 0.5)
+  baseSky = baseSky * (1 - outputCloud[:,:,np.newaxis]) + combinedCloud * (lightLevel * 0.9 + 0.1)
 
   cv2.imwrite('./img_cache/output_cloud.png', combinedCloud)
 
   outputSky = baseMaskSky * baseSky
   outputSky = cv2.cvtColor(np.float32(outputSky), cv2.COLOR_RGB2HSV)
   outputSky[:,:,1] = outputSky[:,:,1] * (lightLevel * 0.7 + 0.3)
-  outputSky[:,:,2] = outputSky[:,:,2] * (lightLevel * 0.9 + 0.1)
+  # outputSky[:,:,2] = outputSky[:,:,2] * (lightLevel * 0.9 + 0.1)
   outputSky = cv2.cvtColor(np.float32(outputSky), cv2.COLOR_HSV2RGB)
 
   outputField = baseMaskField * base
@@ -137,5 +170,3 @@ def CreateImages(time, lightLevel, cloudLevel, rainLevel):
   if not os.path.isfile(skyBasePath) or True:
     GenSky()
   GenImage(time, imagePath, lightLevel, cloudLevel, rainLevel)
-
-# CreateImages(0, 1, 1, 0.5)
