@@ -53,7 +53,8 @@ def GenRain(time, rainLevel, imagesSize, seed=0):
 
   return rain
 
-def GenImage(time, basePath, lightLevel, cloudLevel, rainLevel):
+def GenImage(time, basePath, lightLevel, cloudLevel, rainLevel, nGen):
+
   base = cv2.imread(basePath)
   imagesSize = base.shape
   baseSky = cv2.imread(skyBasePath)
@@ -85,13 +86,13 @@ def GenImage(time, basePath, lightLevel, cloudLevel, rainLevel):
  
   rain = []
 
-  for i in range(10):
+  for i in range(nGen):
     rain.append(GenRain(time, rainLevel, imagesSize, i))
 
   cv2.imwrite('img_cache/output_field.png', outputField)
   cv2.imwrite('img_cache/output_sky.png', outputSky)
-  for i in range(10):
+  for i in range(nGen):
     cv2.imwrite('img_cache/rain' + str(i) + '.png', rain[i] * 255)
 
-def CreateImages(time, lightLevel, cloudLevel, rainLevel):
-  GenImage(time, imagePath, lightLevel, cloudLevel, rainLevel)
+def CreateImages(time, lightLevel, cloudLevel, rainLevel, nGen):
+  GenImage(time, imagePath, lightLevel, cloudLevel, rainLevel, nGen)
